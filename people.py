@@ -1,36 +1,18 @@
-from datetime import datetime
-from flask import abort, make_response
+
+from flask import make_response, abort
+
+from config import db
+from models import Person, people_schema, person_schema
 
 
-
-def get_timestamp():
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-PEOPLE = {
-    "Fairy": {
-        "fname": "Tooth",
-        "lname": "Fairy",
-        "timestamp": get_timestamp(),
-    },
-    "Ruprecht": {
-        "fname": "Knecht",
-        "lname": "Ruprecht",
-        "timestamp": get_timestamp(),
-    },
-    "Bunny": {
-        "fname": "Easter",
-        "lname": "Bunny",
-        "timestamp": get_timestamp(),
-    }
-}
 
 def read_all():
     """
     This function is for returning the list of the all people in the database 
     and it's for retrinving the data in the get request 
     """
-    return list(PEOPLE.values())
+    people = Person.query.all()
+    return people_schema.dump(people)
 
 
 def create(person):
@@ -41,18 +23,17 @@ def create(person):
     Args:
         person (_type_): person object
     """
-    fname = person.get("fname")
-    lname = person.get("lname")
-    if lname and lname not in PEOPLE:
-        PEOPLE[lname] = {
-            "fname" : fname,
-            "lname" : lname,
-            "timestamp" : get_timestamp()
-        }
-        return PEOPLE[lname], 201
+    lname = person.get('lname')
+    exisiting_person = Person.query.filter(Person.lname == lname).one_or_none()
+    
+    if exisiting_person is None:
+        new_person = person_schema.load(person, session=db.session)
+        db.session.add(new_person)
+        db.session.commit()
+        return person_schema.dump(new_person), 201
     else:
-        abort(406, f"this lanme {lname} is already exists.")
-
+        abort(406, f"The person with lname {lname} is already exists.")
+        
 
 
 def read_one(lname):
@@ -63,10 +44,14 @@ def read_one(lname):
     Args:
         lname (string): this arg is for retriving the person
     """
-    if lname in PEOPLE:
-        return PEOPLE[lname], 200
+    person = Person.query.filter(Person.lname == lname).one_or_none()
+    
+    if person is not None:
+        return person_schema.dump(person)
     else:
-        abort(404, f"The lname {lname} is not provided.")
+        abort(404 , f"The lname {lname} that you provided is not correct.")
+
+
 
 
 def update(lname, person):
@@ -78,14 +63,16 @@ def update(lname, person):
         lname (string): it's used for retriving the person
         person (_type_): _description_
     """
-    if lname in PEOPLE:
-        PEOPLE[lname]['fname'] = person.get('fname', PEOPLE[lname]['fname'])
-        PEOPLE[lname]['lname'] = person.get("lname", PEOPLE[lname]['lname'])
-        PEOPLE[lname]['timestamp'] = get_timestamp()
-        return PEOPLE[lname], 200
+    exsiting_person = Person.query.filter(Person.lname == lname).one_or_none()
+    
+    if exsiting_person is not None:
+        updated_person = person_schema.load(person, session=db.session)
+        exsiting_person.fname = updated_person.fname
+        db.session.merge(exsiting_person)
+        db.session.commit()
+        return person_schema.dump(exsiting_person), 201
     else:
-        abort(404, f"the lname {lname} that you provided is not found.")
-        
+        abort(404, f"Person with last name {lname} not found.")        
     
 
 def delete(lname):
@@ -95,8 +82,11 @@ def delete(lname):
     Args:
         lname (string): the arg that we get for retriving the object
     """
-    if lname in PEOPLE:
-        PEOPLE.pop(lname)
-        return make_response(f"The {lname} is successfully deleted", 200)
+    exsiting_person = Person.query.filter(Person.lname == lname).one_or_none()
+    
+    if exsiting_person:
+        db.session.delete(exsiting_person)
+        db.session.commit()
+        return make_response(f"The {lname} was successfully deleted.", 200)
     else:
-        abort(404, f"The lastname {lname} that you provided is not found!")
+        abort(404, f"The last name {lname} that you provided is successully deleted.")

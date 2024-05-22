@@ -15,6 +15,7 @@ def read_all():
     return people_schema.dump(people)
 
 
+
 def create(person):
     """
     this function is for creating the instance of the people and here this function is for handling 

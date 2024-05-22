@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from config import db, ma
-
+from marshmallow_sqlalchemy import fields
 
 class Note(db.Model):
     __tablename__ = "note"
@@ -10,7 +10,14 @@ class Note(db.Model):
     person_id = db.Column(db.Integer, db.ForeignKey("person.id"))
     content = db.Column(db.String, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+
+class NoteSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = Note
+        load_instance = True
+        sqla_session = db.session
+        include_fk = True
 
 class Person(db.Model):
     __tablename__ = "person"
@@ -34,7 +41,10 @@ class PersonSchema(ma.SQLAlchemyAutoSchema):
         model = Person
         load_instance = True
         sqla_session = db.session
+        include_relationships = True
+    notes = fields.Nested(NoteSchema, many=True)
 
 
 person_schema = PersonSchema()
+note_schema = NoteSchema()
 people_schema = PersonSchema(many=True)

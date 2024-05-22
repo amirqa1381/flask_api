@@ -6,13 +6,16 @@
     <title>Document</title>
   </head>
   <body>
-    <h1>
-        Hello, People!
-    </h1>
+    <h1>Hello, People!</h1>
     <ul>
-        {% for person in people %}
-        <li>{{ person.fname }} {{ person.lname }}</li>
+      {% for person in people %}
+      <h2>{{person.fname}} {{person.lname}}</h2>
+      <ul>
+        {% for note in person.notes %}
+        <li>{{note.content}}</li>
         {% endfor %}
+      </ul>
+      {% endfor %}
     </ul>
   </body>
 </html>
